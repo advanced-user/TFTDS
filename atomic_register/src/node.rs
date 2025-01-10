@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 use rand::Rng;
-use crate::{atomic_register_client::ClientId, network::Network, quorum::{Quorum, QuorumState}};
+use crate::{atomic_register_client::ClientId, network::Network, quorum::{self, Quorum, QuorumState}};
 
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
@@ -198,8 +198,7 @@ impl Node {
         self.network.send_to_nodes(Message::CoordinatorReadRequest(self.id.clone()), &self.id);
 
         let mut max_version = self.data.lock().unwrap().version;
-        self.lock_quorum_untile_waiting_request();
-        self.quorum.lock().unwrap().quorum_state = QuorumState::WaitingForReadResponse(1);
+        self.change_quorum_state(QuorumState::WaitingForReadResponse(1));
 
         while !self.quorum.lock().unwrap().done_read_quorum() {
             let message = if let Some(message) = self.get_first_msg() {
@@ -228,17 +227,18 @@ impl Node {
         max_version
     }
 
-    fn lock_quorum_untile_waiting_request(&self) {
+    fn change_quorum_state(&self, quorum_state: QuorumState) {
         while !self.quorum.lock().unwrap().is_waiting_request() {
             continue;
         }
+
+        self.quorum.lock().unwrap().quorum_state = quorum_state;
     }
 
     fn send_write_request(&self, message: Message) {
         self.network.send_to_nodes(message, &self.id);
 
-        self.lock_quorum_untile_waiting_request();
-        self.quorum.lock().unwrap().quorum_state = QuorumState::WaitingForWriteAck(1);
+        self.change_quorum_state(QuorumState::WaitingForWriteAck(1));
 
         while !self.quorum.lock().unwrap().done_write_quorum() {
             let message = if let Some(message) = self.get_first_msg() {
@@ -276,8 +276,7 @@ impl Node {
         // Phase 1
         self.network.send_to_nodes(Message::CoordinatorReadRequest(self.id.clone()), &self.id);
 
-        self.lock_quorum_untile_waiting_request();
-        self.quorum.lock().unwrap().quorum_state = QuorumState::WaitingForReadResponse(1);
+        self.change_quorum_state(QuorumState::WaitingForReadResponse(1));
 
         while !self.quorum.lock().unwrap().done_read_quorum() {
             let message = if let Some(message) = self.get_first_msg() {
@@ -311,9 +310,7 @@ impl Node {
 
         // Phase 2
         if nodes_havent_newest_data {
-            self.lock_quorum_untile_waiting_request();
-            self.quorum.lock().unwrap().quorum_state = QuorumState::WaitingForWriteAck(1);
-
+            self.change_quorum_state(QuorumState::WaitingForWriteAck(1));       
             self.network.send_to_nodes(Message::CoordinatorWriteRequest((self.id.clone(), newest_data.clone())), &self.id);
 
             while !self.quorum.lock().unwrap().done_write_quorum() {
