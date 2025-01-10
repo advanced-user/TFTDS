@@ -33,22 +33,22 @@ fn main() {
         println!("Client1 starts read operation.");
         client1.read();
 
-        // println!("Client1 starts write operation.");
-        // client1.write( "Data 1".to_string());
+        println!("Client1 starts write operation.");
+        client1.write( "Data 1".to_string());
 
-        // println!("Client1 starts read operation.");
-        // client1.read();
+        println!("Client1 starts read operation.");
+        client1.read();
     });
     
     let handle2 = std::thread::spawn(move || {
         println!("Client2 starts read operation.");
         client2.read();
 
-        // println!("Client2 starts write operation.");
-        // client2.write("Data 2".to_string());
+        println!("Client2 starts write operation.");
+        client2.write("Data 2".to_string());
 
-        // println!("Client2 starts read operation.");
-        // client2.read();
+        println!("Client2 starts read operation.");
+        client2.read();
     });
 
     handle1.join().unwrap();

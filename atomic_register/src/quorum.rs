@@ -36,6 +36,13 @@ impl Quorum {
         }
     }
 
+    pub fn is_waiting_request(&self) -> bool {
+        match self.quorum_state {
+            QuorumState::WaitingForRequest => true,
+            _ => false,
+        }
+    }
+
     pub fn is_write_coordinator(&self) -> bool {
         match self.quorum_state {
             QuorumState::WaitingForWriteAck(_) => true,
